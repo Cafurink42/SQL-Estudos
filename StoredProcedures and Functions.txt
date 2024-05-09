@@ -1,0 +1,61 @@
+CREATE TABLE alunos (
+    matricula SERIAL PRIMARY KEY,
+    nome VARCHAR(60),
+    prova1 FLOAT,
+    prova2 FLOAT,
+    mediaFinal FLOAT
+);
+
+-- Inserções na tabela "alunos"
+INSERT INTO alunos (nome, prova1, prova2, mediaFinal) VALUES ('João', 8.5, 7.5, NULL);
+INSERT INTO alunos (nome, prova1, prova2, mediaFinal) VALUES ('Maria', 7.0, 6.5, NULL);
+INSERT INTO alunos (nome, prova1, prova2, mediaFinal) VALUES ('Pedro', 9.0, 8.0, NULL);
+SELECT * FROM alunos;
+
+-- Criação da função para calcular a média
+CREATE OR REPLACE FUNCTION calcular_media()
+RETURNS FLOAT AS $$
+DECLARE
+    media FLOAT;
+BEGIN
+    -- Calcula a média
+    SELECT AVG((prova1 + prova2) / 2) INTO media FROM alunos;
+    
+    -- Retorna a média
+    RETURN media;
+END;
+$$ LANGUAGE PLPGSQL;
+
+-- Criação do procedure para armazenar e atualizar a média final
+CREATE OR REPLACE PROCEDURE atualizar_media_final()
+AS $$
+DECLARE
+    media FLOAT;
+BEGIN
+    -- Calcula a média
+    media := calcular_media();
+    
+    -- Atualiza a coluna "mediaFinal" na tabela
+    UPDATE alunos SET mediaFinal = media;
+END;
+$$ LANGUAGE PLPGSQL;
+
+-- Criação do trigger para executar o procedimento armazenado após a inserção de dados na tabela
+CREATE OR REPLACE FUNCTION trigger_atualizar_media_final()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Executa o procedimento armazenado para atualizar a média final
+    PERFORM atualizar_media_final();
+    
+    -- Retorna o NEW para permitir a execução do trigger
+    RETURN NEW;
+END;
+$$ LANGUAGE PLPGSQL;
+
+CREATE TRIGGER atualizacao_media_final_trigger
+AFTER INSERT ON alunos
+FOR EACH ROW
+EXECUTE FUNCTION trigger_atualizar_media_final();
+
+-- Chamada para executar o procedimento armazenado após a inserção inicial dos dados
+CALL atualizar_media_final();
